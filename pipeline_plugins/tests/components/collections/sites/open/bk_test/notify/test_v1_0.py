@@ -43,9 +43,10 @@ class BkNotifyComponentTest(TestCase, ComponentTestMixin):
 class MockClient(object):
     def __init__(self, cc_search_business_return=None, cmsi_send_msg_return=None):
         # 创建不自动生成属性的Mock对象
-        self.api = MagicMock(spec=["search_business", "v1_send_weixin"])
+        self.api = MagicMock(spec=["search_business", "v1_send_weixin", "send_voice_msg"])
         self.api.search_business = MagicMock(return_value=cc_search_business_return)
         self.api.v1_send_weixin = MagicMock(return_value=cmsi_send_msg_return)
+        self.api.send_voice_msg = MagicMock(return_value=cmsi_send_msg_return)
         # 禁用MagicMock的自动属性创建
         self.api._mock_return_value = None
         self.api._mock_side_effect = None
@@ -215,7 +216,7 @@ SEND_VOICE_MSG_SUCCESS_CASE = ComponentTestCase(
     execute_assertion=ExecuteAssertion(success=True, outputs={}),
     execute_call_assertion=[
         CallAssertion(
-            func=SEND_MSG_SUCCESS_CLIENT.cmsi.send_voice_msg,
+            func=SEND_MSG_SUCCESS_CLIENT.api.send_voice_msg,
             calls=[
                 Call(
                     {
