@@ -39,6 +39,18 @@ class JobPushLocalFilesComponentTest(TestCase, ComponentTestMixin):
     def component_cls(self):
         return JobPushLocalFilesComponent
 
+    def setUp(self):
+        super().setUp()
+        from django.conf import settings
+
+        setattr(settings, "ENABLE_IPV6", False)
+
+    def tearDown(self):
+        super().tearDown()
+        from django.conf import settings
+
+        setattr(settings, "ENABLE_IPV6", True)
+
 
 # mock path
 GET_CLIENT_BY_USER = (
@@ -181,7 +193,7 @@ def PUSH_FILE_TO_IPS_FAIL_CASE():
         ),
         schedule_assertion=None,
         execute_call_assertion=[
-            CallAssertion(func=GET_CLIENT_BY_USER, calls=[Call("executor", stage="prod")]),
+            CallAssertion(func=GET_CLIENT_BY_USER, calls=[Call("executor", stage="dev")]),
             CallAssertion(
                 func=CC_GET_IPS_INFO_BY_STR,
                 calls=[Call(tenant_id="system", username="executor", biz_cc_id="1", ip_str="1.1.1.1", use_cache=False)],
@@ -207,7 +219,7 @@ def PUSH_FILE_TO_IPS_FAIL_CASE():
             Patcher(target=ENVIRONMENT_VAR_GET, return_value="a_type"),
             Patcher(target=FACTORY_GET_MANAGER, return_value=PUSH_FAIL_MANAGER),
             Patcher(target=GET_CLIENT_BY_USER, return_value=PUSH_FAIL_ESB_CLIENT),
-            Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"ip_result": [{"InnerIP": "1.1.1.1", "Source": 0}]}),
+            Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"result": True, "ip_result": [{"InnerIP": "1.1.1.1", "Source": 0}]}),
             Patcher(target=JOB_HANDLE_API_ERROR, return_value="failed"),
         ],
     )
@@ -280,7 +292,7 @@ def SCHEDULE_FAILURE_CASE():
             schedule_finished=True,
         ),
         execute_call_assertion=[
-            CallAssertion(func=GET_CLIENT_BY_USER, calls=[Call("executor", stage="prod")]),
+            CallAssertion(func=GET_CLIENT_BY_USER, calls=[Call("executor", stage="dev")]),
             CallAssertion(
                 func=CC_GET_IPS_INFO_BY_STR,
                 calls=[Call(tenant_id="system", username="executor", biz_cc_id="1", ip_str="1.1.1.1", use_cache=False)],
@@ -307,7 +319,7 @@ def SCHEDULE_FAILURE_CASE():
             Patcher(target=FACTORY_GET_MANAGER, return_value=SCHEDULE_FAILURE_MANAGER),
             Patcher(target=GET_CLIENT_BY_USER, return_value=SCHEDULE_FAILURE_ESB_CLIENT),
             Patcher(target=GET_CLIENT_BY_USERNAME, return_value=SCHEDULE_FAILURE_ESB_CLIENT),
-            Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"ip_result": [{"InnerIP": "1.1.1.1", "Source": 0}]}),
+            Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"result": True, "ip_result": [{"InnerIP": "1.1.1.1", "Source": 0}]}),
             Patcher(target=GET_JOB_INSTANCE_URL, return_value="url_token"),
         ],
     )
@@ -406,7 +418,7 @@ def SUCCESS_MULTI_CASE():
             schedule_finished=True,
         ),
         execute_call_assertion=[
-            CallAssertion(func=GET_CLIENT_BY_USER, calls=[Call("executor", stage="prod")]),
+            CallAssertion(func=GET_CLIENT_BY_USER, calls=[Call("executor", stage="dev")]),
             CallAssertion(
                 func=CC_GET_IPS_INFO_BY_STR,
                 calls=[
@@ -463,7 +475,7 @@ def SUCCESS_MULTI_CASE():
             Patcher(target=FACTORY_GET_MANAGER, return_value=SUCCESS_MANAGER),
             Patcher(target=GET_CLIENT_BY_USER, return_value=SUCCESS_ESB_CLIENT),
             Patcher(target=BASE_GET_CLIENT_BY_USER, return_value=SUCCESS_ESB_CLIENT),
-            Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"ip_result": [{"InnerIP": "1.1.1.1", "Source": 0}]}),
+            Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"result": True, "ip_result": [{"InnerIP": "1.1.1.1", "Source": 0}]}),
             Patcher(target=GET_JOB_INSTANCE_URL, return_value="url_token"),
         ],
     )
@@ -563,7 +575,7 @@ def SUCCESS_MULTI_CASE_WITH_TIMEOUT():
             schedule_finished=True,
         ),
         execute_call_assertion=[
-            CallAssertion(func=GET_CLIENT_BY_USER, calls=[Call("executor", stage="prod")]),
+            CallAssertion(func=GET_CLIENT_BY_USER, calls=[Call("executor", stage="dev")]),
             CallAssertion(
                 func=CC_GET_IPS_INFO_BY_STR,
                 calls=[
@@ -623,7 +635,7 @@ def SUCCESS_MULTI_CASE_WITH_TIMEOUT():
             Patcher(target=FACTORY_GET_MANAGER, return_value=SUCCESS_MANAGER),
             Patcher(target=GET_CLIENT_BY_USER, return_value=SUCCESS_ESB_CLIENT),
             Patcher(target=BASE_GET_CLIENT_BY_USER, return_value=SUCCESS_ESB_CLIENT),
-            Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"ip_result": [{"InnerIP": "1.1.1.1", "Source": 0}]}),
+            Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"result": True, "ip_result": [{"InnerIP": "1.1.1.1", "Source": 0}]}),
             Patcher(target=GET_JOB_INSTANCE_URL, return_value="url_token"),
         ],
     )

@@ -34,6 +34,16 @@ class JobFastPushFilesComponentTest(TestCase, ComponentTestMixin):
     def component_cls(self):
         return JobFastPushFileComponent
 
+    def setUp(self):
+        super().setUp()
+        from django.conf import settings
+        setattr(settings, "ENABLE_IPV6", False)
+
+    def tearDown(self):
+        super().tearDown()
+        from django.conf import settings
+        setattr(settings, "ENABLE_IPV6", True)
+
 
 class JobMockClient(object):
     def __init__(self, fast_push_file_return=None, get_job_instance_status_return=None):
@@ -151,11 +161,11 @@ CLL_INFO = MagicMock(
                 },
                 "account_alias": "root",
                 "file_target_path": "/tmp/ee/",
+                "upload_speed_limit": 100,
+                "download_speed_limit": 100,
+                "timeout": 100,
+                "rolling_config": {"expression": "10%", "mode": "1"},
             },
-            "upload_speed_limit": 100,
-            "download_speed_limit": 100,
-            "timeout": 100,
-            "rolling_config": {"expression": "10%", "mode": "1"},
             "headers": {"X-Bk-Tenant-Id": "system"},
         },
         {
@@ -179,11 +189,11 @@ CLL_INFO = MagicMock(
                 },
                 "account_alias": "user01",
                 "file_target_path": "/tmp/200/",
+                "upload_speed_limit": 100,
+                "download_speed_limit": 100,
+                "timeout": 100,
+                "rolling_config": {"expression": "10%", "mode": "1"},
             },
-            "upload_speed_limit": 100,
-            "download_speed_limit": 100,
-            "timeout": 100,
-            "rolling_config": {"expression": "10%", "mode": "1"},
             "headers": {"X-Bk-Tenant-Id": "system"},
         },
     ]
