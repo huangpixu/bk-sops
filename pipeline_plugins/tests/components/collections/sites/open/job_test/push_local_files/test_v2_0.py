@@ -23,6 +23,7 @@ from pipeline.component_framework.test import (
 )
 
 from pipeline_plugins.components.collections.sites.open.job.push_local_files.v2_0 import JobPushLocalFilesComponent
+from pipeline_plugins.tests.components.collections.sites.open.utils.cc_ipv6_mock_utils import MockCMDBClientIPv6
 
 
 class JobPushLocalFilesComponentTest(TestCase, ComponentTestMixin):
@@ -47,6 +48,17 @@ GET_CLIENT_BY_USER = (
 GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.job.base.get_client_by_username"
 
 BASE_GET_CLIENT_BY_USER = "pipeline_plugins.components.collections.sites.open.job.base.get_client_by_username"
+
+# 添加 CC client mock 路径，用于 IPv6 支持
+CC_GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.cc.base.get_client_by_username"
+CMDB_GET_CLIENT_BY_USERNAME = "gcloud.utils.cmdb.get_client_by_username"
+
+
+# MockCMDBClient class definition for IPv6 support
+class MockCMDBClient(MockCMDBClientIPv6):
+    pass
+
+
 CC_GET_IPS_INFO_BY_STR = "pipeline_plugins.components.utils.sites.open.utils.cc_get_ips_info_by_str"
 CMDB_GET_CLIENT_BY_USERNAME = "gcloud.utils.cmdb.get_client_by_username"
 
@@ -81,7 +93,11 @@ def FILE_MANAGER_NOT_CONFIG_CASE():
             success=False, outputs={"ex_data": "File Manager configuration error, contact administrator please."}
         ),
         schedule_assertion=None,
-        patchers=[Patcher(target=ENVIRONMENT_VAR_GET, return_value=None)],
+        patchers=[
+            Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+            Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+            Patcher(target=ENVIRONMENT_VAR_GET, return_value=None),
+        ],
     )
 
 
@@ -126,7 +142,7 @@ def PUSH_FILE_TO_IPS_FAIL_CASE():
     PUSH_FAIL_ESB_CLIENT = MagicMock()
     PUSH_FAIL_MANAGER = MagicMock()
     PUSH_FAIL_MANAGER.push_files_to_ips = MagicMock(return_value=PUSH_FAIL_RESULT)
-    
+
     # Mock CMDB client with proper api.list_biz_hosts
     PUSH_FAIL_CMDB_CLIENT = MagicMock()
     PUSH_FAIL_CMDB_CLIENT.api.list_biz_hosts = MagicMock(
@@ -203,6 +219,8 @@ def PUSH_FILE_TO_IPS_FAIL_CASE():
             ),
         ],
         patchers=[
+            Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+            Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
             Patcher(target=ENVIRONMENT_VAR_GET, return_value="a_type"),
             Patcher(target=FACTORY_GET_MANAGER, return_value=PUSH_FAIL_MANAGER),
             Patcher(target=GET_CLIENT_BY_USER, return_value=PUSH_FAIL_ESB_CLIENT),
@@ -222,7 +240,7 @@ def SCHEDULE_FAILURE_CASE():
     SCHEDULE_FAILURE_MANAGER = MagicMock()
     SCHEDULE_FAILURE_MANAGER.push_files_to_ips = MagicMock(return_value=SCHEDULE_FAILURE_RESULT)
     SCHEDULE_FAILURE_ESB_CLIENT.api.get_job_instance_status = MagicMock(return_value=SCHEDULE_FAILURE_QUERY_RESULT)
-    
+
     # Mock CMDB client with proper api.list_biz_hosts
     SCHEDULE_FAILURE_CMDB_CLIENT = MagicMock()
     SCHEDULE_FAILURE_CMDB_CLIENT.api.list_biz_hosts = MagicMock(
@@ -312,6 +330,8 @@ def SCHEDULE_FAILURE_CASE():
             ),
         ],
         patchers=[
+            Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+            Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
             Patcher(target=ENVIRONMENT_VAR_GET, return_value="a_type"),
             Patcher(target=FACTORY_GET_MANAGER, return_value=SCHEDULE_FAILURE_MANAGER),
             Patcher(target=GET_CLIENT_BY_USER, return_value=SCHEDULE_FAILURE_ESB_CLIENT),
@@ -337,7 +357,7 @@ def SUCCESS_MULTI_CASE():
     SUCCESS_MANAGER = MagicMock()
     SUCCESS_MANAGER.push_files_to_ips = MagicMock(side_effect=SUCCESS_RESULT)
     SUCCESS_ESB_CLIENT.api.get_job_instance_status = MagicMock(side_effect=[SUCCESS_QUERY_RETURN for i in range(3)])
-    
+
     # Mock CMDB client with proper api.list_biz_hosts
     SUCCESS_CMDB_CLIENT = MagicMock()
     SUCCESS_CMDB_CLIENT.api.list_biz_hosts = MagicMock(
@@ -468,6 +488,8 @@ def SUCCESS_MULTI_CASE():
             ),
         ],
         patchers=[
+            Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+            Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
             Patcher(target=ENVIRONMENT_VAR_GET, return_value="a_type"),
             Patcher(target=FACTORY_GET_MANAGER, return_value=SUCCESS_MANAGER),
             Patcher(target=GET_CLIENT_BY_USER, return_value=SUCCESS_ESB_CLIENT),
@@ -493,7 +515,7 @@ def SUCCESS_MULTI_CASE_WITH_TIMEOUT():
     SUCCESS_MANAGER = MagicMock()
     SUCCESS_MANAGER.push_files_to_ips = MagicMock(side_effect=SUCCESS_RESULT)
     SUCCESS_ESB_CLIENT.api.get_job_instance_status = MagicMock(side_effect=[SUCCESS_QUERY_RETURN for i in range(3)])
-    
+
     # Mock CMDB client with proper api.list_biz_hosts
     SUCCESS_TIMEOUT_CMDB_CLIENT = MagicMock()
     SUCCESS_TIMEOUT_CMDB_CLIENT.api.list_biz_hosts = MagicMock(
@@ -628,6 +650,8 @@ def SUCCESS_MULTI_CASE_WITH_TIMEOUT():
             ),
         ],
         patchers=[
+            Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+            Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
             Patcher(target=ENVIRONMENT_VAR_GET, return_value="a_type"),
             Patcher(target=FACTORY_GET_MANAGER, return_value=SUCCESS_MANAGER),
             Patcher(target=GET_CLIENT_BY_USER, return_value=SUCCESS_ESB_CLIENT),

@@ -27,6 +27,7 @@ from pipeline.component_framework.test import (
 from pipeline_plugins.components.collections.sites.open.job.fast_execute_script.v1_2 import (
     JobFastExecuteScriptComponent,
 )
+from pipeline_plugins.tests.components.collections.sites.open.utils.cc_ipv6_mock_utils import MockCMDBClientIPv6
 
 
 class JobFastExecuteScriptComponentTest(TestCase, ComponentTestMixin):
@@ -68,10 +69,21 @@ class MockClient(object):
         self.api.get_job_instance_status = MagicMock(return_value=get_job_instance_status)
 
 
+# Mock CMDB Client for IPv6 support
+class MockCMDBClient(MockCMDBClientIPv6):
+    def __init__(self):
+        super(MockCMDBClient, self).__init__()
+
+
 # mock path
 GET_CLIENT_BY_USER = (
     "pipeline_plugins.components.collections.sites.open.job.fast_execute_script.v1_2.get_client_by_username"
 )
+
+# 添加 CC client mock 路径，用于 IPv6 支持
+CC_GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.cc.base.get_client_by_username"
+CMDB_GET_CLIENT_BY_USERNAME = "gcloud.utils.cmdb.get_client_by_username"
+
 GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.job.base.get_client_by_username"
 
 GET_NODE_CALLBACK_URL = (
@@ -326,6 +338,8 @@ FAST_EXECUTE_MANUAL_SCRIPT_SUCCESS_SCHEDULE_CALLBACK_DATA_ERROR_CASE = Component
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value=GET_NODE_CALLBACK_URL_MOCK()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=FAST_EXECUTE_SCRIPT_SUCCESS_CLIENT),
         Patcher(target=GET_JOB_INSTANCE_URL, return_value="instance_url_token"),
@@ -354,6 +368,8 @@ FAST_EXECUTE_MANUAL_SCRIPT_SUCCESS_SCHEDULE_SUCCESS_CASE = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value=GET_NODE_CALLBACK_URL_MOCK()),
         Patcher(
             target=CC_GET_IPS_INFO_BY_STR,
@@ -383,6 +399,8 @@ FAST_EXECUTE_MANUAL_SCRIPT_FAIL_CASE = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value=GET_NODE_CALLBACK_URL_MOCK()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=FAST_EXECUTE_SCRIPT_FAIL_CLIENT),
         Patcher(target=GET_JOB_INSTANCE_URL, return_value="instance_url_token"),

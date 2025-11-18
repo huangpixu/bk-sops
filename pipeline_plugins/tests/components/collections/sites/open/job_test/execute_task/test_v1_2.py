@@ -26,6 +26,7 @@ from pipeline.component_framework.test import (
 
 from pipeline_plugins.components.collections.sites.open.job import base
 from pipeline_plugins.components.collections.sites.open.job.execute_task.v1_2 import JobExecuteTaskComponent
+from pipeline_plugins.tests.components.collections.sites.open.utils.cc_ipv6_mock_utils import MockCMDBClientIPv6
 
 base.LOG_VAR_SEARCH_CONFIGS.append({"re": "<##(.+?)##>", "kv_sep": "="})
 
@@ -65,11 +66,21 @@ class MockClient(object):
         self.api.get_job_instance_status = MagicMock(return_value=get_job_instance_status)
 
 
+# Mock CMDB Client for IPv6 support
+class MockCMDBClient(MockCMDBClientIPv6):
+    def __init__(self):
+        super(MockCMDBClient, self).__init__()
+
+
 # mock path
 # 因为v1.2版本的JobExecuteTaskService类直接继承了JobExecuteTaskServiceBase类,所以mock路径也使用其父类的路径
 GET_CLIENT_BY_USER = (
     "pipeline_plugins.components.collections.sites.open.job.execute_task.execute_task_base.get_client_by_username"
 )
+
+# 添加 CC client mock 路径，用于 IPv6 支持
+CC_GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.cc.base.get_client_by_username"
+CMDB_GET_CLIENT_BY_USERNAME = "gcloud.utils.cmdb.get_client_by_username"
 
 GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.job.base.get_client_by_username"
 
@@ -81,8 +92,12 @@ CMDB_GET_CLIENT_BY_USERNAME = "gcloud.utils.cmdb.get_client_by_username"
 CMDB_GET_BUSINESS_HOST = "gcloud.utils.cmdb.get_business_host"
 CMDB_GET_BUSINESS_SET_HOST = "gcloud.utils.cmdb.get_business_set_host"
 GET_IPV4_HOST_LIST = "pipeline_plugins.components.collections.sites.open.cc.ipv6_utils.get_ipv4_host_list"
-CC_GET_HOST_BY_INNERIP_WITH_IPV6 = "pipeline_plugins.components.collections.sites.open.cc.base.cc_get_host_by_innerip_with_ipv6"
-CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS = "pipeline_plugins.components.collections.sites.open.cc.ipv6_utils.cc_get_host_by_innerip_with_ipv6_across_business"
+CC_GET_HOST_BY_INNERIP_WITH_IPV6 = (
+    "pipeline_plugins.components.collections.sites.open.cc.base.cc_get_host_by_innerip_with_ipv6"
+)
+CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS = (
+    "pipeline_plugins.components.collections.sites.open.cc.ipv6_utils.cc_get_host_by_innerip_with_ipv6_across_business"
+)
 
 CC_GET_IPS_INFO_BY_STR = "pipeline_plugins.components.utils.sites.open.utils.cc_get_ips_info_by_str"
 GET_NODE_CALLBACK_URL = (
@@ -92,6 +107,10 @@ GET_JOB_INSTANCE_URL = (
     "pipeline_plugins.components.collections.sites.open.job.execute_task.execute_task_base.get_job_instance_url"
 )
 BASE_GET_CLIENT_BY_USER = "pipeline_plugins.components.collections.sites.open.job.base.get_client_by_username"
+
+# 添加 CC client mock 路径，用于 IPv6 支持
+CC_GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.cc.base.get_client_by_username"
+CMDB_GET_CLIENT_BY_USERNAME = "gcloud.utils.cmdb.get_client_by_username"
 
 GET_VAR_ERROR_SUCCESS_GET_LOG_RETURN = {"code": 0, "result": False, "message": "success", "data": []}
 
@@ -360,6 +379,7 @@ GET_VAR_ERROR_SUCCESS_CLIENT = MockClient(
     get_job_instance_status=EXECUTE_SUCCESS_GET_STATUS_RETURN,
 )
 
+
 # Mock function for cc_get_host_by_innerip_with_ipv6
 def mock_cc_get_host_by_innerip_with_ipv6(tenant_id, executor, bk_biz_id, ip_str, is_biz_set=False):
     """
@@ -368,9 +388,10 @@ def mock_cc_get_host_by_innerip_with_ipv6(tenant_id, executor, bk_biz_id, ip_str
     """
     # Extract IPs from ip_str
     import re
-    ip_pattern = r'(?:\d+:)?(\d+\.\d+\.\d+\.\d+)'
+
+    ip_pattern = r"(?:\d+:)?(\d+\.\d+\.\d+\.\d+)"
     ips = re.findall(ip_pattern, ip_str)
-    
+
     # Map of known test IPs to their host data
     ip_host_map = {
         "1.1.1.1": {"bk_host_id": 1, "bk_host_innerip": "1.1.1.1", "bk_cloud_id": 1, "bk_agent_id": "agent1"},
@@ -382,12 +403,12 @@ def mock_cc_get_host_by_innerip_with_ipv6(tenant_id, executor, bk_biz_id, ip_str
         "127.0.0.1": {"bk_host_id": 7, "bk_host_innerip": "127.0.0.1", "bk_cloud_id": 0, "bk_agent_id": "agent7"},
         "127.0.0.2": {"bk_host_id": 8, "bk_host_innerip": "127.0.0.2", "bk_cloud_id": 0, "bk_agent_id": "agent8"},
     }
-    
+
     hosts = []
     for ip in ips:
         if ip in ip_host_map:
             hosts.append(ip_host_map[ip])
-    
+
     return {"result": True, "data": hosts}
 
 
@@ -395,13 +416,15 @@ def mock_cc_get_host_by_innerip_with_ipv6(tenant_id, executor, bk_biz_id, ip_str
 def mock_cc_get_host_by_innerip_with_ipv6_across_business(tenant_id, executor, bk_biz_id, ip_str):
     """
     Mock function for across business IP query
-    Returns (host_list, ipv4_not_find_list, ipv4_with_cloud_not_find_list, ipv6_not_find_list, ipv6_with_cloud_not_find_list)
+    Returns (host_list, ipv4_not_find_list, ipv4_with_cloud_not_find_list,
+             ipv6_not_find_list, ipv6_with_cloud_not_find_list)
     """
     # Extract IPs from ip_str
     import re
-    ip_pattern = r'(?:\d+:)?(\d+\.\d+\.\d+\.\d+)'
+
+    ip_pattern = r"(?:\d+:)?(\d+\.\d+\.\d+\.\d+)"
     ips = re.findall(ip_pattern, ip_str)
-    
+
     # Map of known test IPs to their host data
     ip_host_map = {
         "1.1.1.1": {"bk_host_id": 1, "bk_host_innerip": "1.1.1.1", "bk_cloud_id": 1, "bk_agent_id": "agent1"},
@@ -413,7 +436,7 @@ def mock_cc_get_host_by_innerip_with_ipv6_across_business(tenant_id, executor, b
         "127.0.0.1": {"bk_host_id": 7, "bk_host_innerip": "127.0.0.1", "bk_cloud_id": 0, "bk_agent_id": "agent7"},
         "127.0.0.2": {"bk_host_id": 8, "bk_host_innerip": "127.0.0.2", "bk_cloud_id": 0, "bk_agent_id": "agent8"},
     }
-    
+
     hosts = []
     not_found_ips = []
     for ip in ips:
@@ -421,8 +444,9 @@ def mock_cc_get_host_by_innerip_with_ipv6_across_business(tenant_id, executor, b
             hosts.append(ip_host_map[ip])
         else:
             not_found_ips.append(ip)
-    
-    # Return (host_list, ipv4_not_find_list, ipv4_with_cloud_not_find_list, ipv6_not_find_list, ipv6_with_cloud_not_find_list)
+
+    # Return (host_list, ipv4_not_find_list, ipv4_with_cloud_not_find_list,
+    #         ipv6_not_find_list, ipv6_with_cloud_not_find_list)
     return (hosts, not_found_ips, [], [], [])
 
 
@@ -443,12 +467,12 @@ def mock_get_ipv4_host_list(tenant_id, executor, bk_biz_id, ipv4_list, is_biz_se
         "127.0.0.1": {"bk_host_id": 7, "bk_host_innerip": "127.0.0.1", "bk_cloud_id": 0, "bk_agent_id": "agent7"},
         "127.0.0.2": {"bk_host_id": 8, "bk_host_innerip": "127.0.0.2", "bk_cloud_id": 0, "bk_agent_id": "agent8"},
     }
-    
+
     hosts = []
     for ip in ipv4_list:
         if ip in ip_host_map:
             hosts.append(ip_host_map[ip])
-    
+
     return hosts
 
 
@@ -460,7 +484,7 @@ def mock_get_business_host(tenant_id, username, bk_biz_id, host_fields, ip_list=
     """
     if not ip_list:
         return []
-    
+
     # Map of known test IPs to their host data
     ip_host_map = {
         "1.1.1.1": {"bk_host_id": 1, "bk_host_innerip": "1.1.1.1", "bk_cloud_id": 1, "bk_agent_id": "agent1"},
@@ -472,7 +496,7 @@ def mock_get_business_host(tenant_id, username, bk_biz_id, host_fields, ip_list=
         "127.0.0.1": {"bk_host_id": 7, "bk_host_innerip": "127.0.0.1", "bk_cloud_id": 0, "bk_agent_id": "agent7"},
         "127.0.0.2": {"bk_host_id": 8, "bk_host_innerip": "127.0.0.2", "bk_cloud_id": 0, "bk_agent_id": "agent8"},
     }
-    
+
     hosts = []
     for ip in ip_list:
         if ip in ip_host_map:
@@ -481,7 +505,7 @@ def mock_get_business_host(tenant_id, username, bk_biz_id, host_fields, ip_list=
             if bk_cloud_id is not None and host_data["bk_cloud_id"] != bk_cloud_id:
                 continue
             hosts.append(host_data)
-    
+
     return hosts
 
 
@@ -493,7 +517,7 @@ def mock_get_business_set_host(tenant_id, username, host_fields, ip_list=None):
     """
     if not ip_list:
         return []
-    
+
     # Map of known test IPs to their host data
     ip_host_map = {
         "1.1.1.1": {"bk_host_id": 1, "bk_host_innerip": "1.1.1.1", "bk_cloud_id": 1, "bk_agent_id": "agent1"},
@@ -505,13 +529,14 @@ def mock_get_business_set_host(tenant_id, username, host_fields, ip_list=None):
         "127.0.0.1": {"bk_host_id": 7, "bk_host_innerip": "127.0.0.1", "bk_cloud_id": 0, "bk_agent_id": "agent7"},
         "127.0.0.2": {"bk_host_id": 8, "bk_host_innerip": "127.0.0.2", "bk_cloud_id": 0, "bk_agent_id": "agent8"},
     }
-    
+
     hosts = []
     for ip in ip_list:
         if ip in ip_host_map:
             hosts.append(ip_host_map[ip])
-    
+
     return hosts
+
 
 # test cases
 EXECUTE_JOB_FAIL_CASE = ComponentTestCase(
@@ -581,6 +606,8 @@ EXECUTE_JOB_FAIL_CASE = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=EXECUTE_JOB_CALL_FAIL_CLIENT),
         Patcher(
             target=CC_GET_IPS_INFO_BY_STR,
@@ -589,7 +616,10 @@ EXECUTE_JOB_FAIL_CASE = ComponentTestCase(
         Patcher(target=GET_NODE_CALLBACK_URL, return_value="url_token"),
         Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
         Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6, side_effect=mock_cc_get_host_by_innerip_with_ipv6),
-        Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS, side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business),
+        Patcher(
+            target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS,
+            side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business,
+        ),
         Patcher(target=GET_IPV4_HOST_LIST, side_effect=mock_get_ipv4_host_list),
         Patcher(target=CMDB_GET_BUSINESS_HOST, side_effect=mock_get_business_host),
         Patcher(target=CMDB_GET_BUSINESS_SET_HOST, side_effect=mock_get_business_set_host),
@@ -654,6 +684,8 @@ INVALID_CALLBACK_DATA_CASE = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=INVALID_CALLBACK_DATA_CLIENT),
         Patcher(
             target=CC_GET_IPS_INFO_BY_STR,
@@ -661,10 +693,12 @@ INVALID_CALLBACK_DATA_CASE = ComponentTestCase(
         ),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value="url_token"),
         Patcher(target=GET_JOB_INSTANCE_URL, return_value="instance_url_token"),
-            Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
-
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
         Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6, side_effect=mock_cc_get_host_by_innerip_with_ipv6),
-        Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS, side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business),
+        Patcher(
+            target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS,
+            side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business,
+        ),
         Patcher(target=GET_IPV4_HOST_LIST, side_effect=mock_get_ipv4_host_list),
         Patcher(target=CMDB_GET_BUSINESS_HOST, side_effect=mock_get_business_host),
         Patcher(target=CMDB_GET_BUSINESS_SET_HOST, side_effect=mock_get_business_set_host),
@@ -740,6 +774,8 @@ JOB_EXECUTE_NOT_SUCCESS_CASE = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=JOB_EXECUTE_NOT_SUCCESS_CLIENT),
         Patcher(
             target=CC_GET_IPS_INFO_BY_STR,
@@ -747,10 +783,12 @@ JOB_EXECUTE_NOT_SUCCESS_CASE = ComponentTestCase(
         ),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value="url_token"),
         Patcher(target=GET_JOB_INSTANCE_URL, return_value="instance_url_token"),
-            Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
-
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
         Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6, side_effect=mock_cc_get_host_by_innerip_with_ipv6),
-        Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS, side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business),
+        Patcher(
+            target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS,
+            side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business,
+        ),
         Patcher(target=GET_IPV4_HOST_LIST, side_effect=mock_get_ipv4_host_list),
         Patcher(target=CMDB_GET_BUSINESS_HOST, side_effect=mock_get_business_host),
         Patcher(target=CMDB_GET_BUSINESS_SET_HOST, side_effect=mock_get_business_set_host),
@@ -843,6 +881,8 @@ GET_GLOBAL_VAR_FAIL_CASE = ComponentTestCase(
         )
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=GET_GLOBAL_VAR_CALL_FAIL_CLIENT),
         Patcher(target=GET_CLIENT_BY_USERNAME, return_value=GET_GLOBAL_VAR_CALL_FAIL_CLIENT),
         Patcher(target=GET_CLIENT_JOB_BY_USERNAME, return_value=GET_GLOBAL_VAR_CALL_FAIL_CLIENT),
@@ -854,7 +894,10 @@ GET_GLOBAL_VAR_FAIL_CASE = ComponentTestCase(
         Patcher(target=GET_NODE_CALLBACK_URL, return_value="url_token"),
         Patcher(target=GET_JOB_INSTANCE_URL, return_value="instance_url_token"),
         Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6, side_effect=mock_cc_get_host_by_innerip_with_ipv6),
-        Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS, side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business),
+        Patcher(
+            target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS,
+            side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business,
+        ),
         Patcher(target=GET_IPV4_HOST_LIST, side_effect=mock_get_ipv4_host_list),
         Patcher(target=CMDB_GET_BUSINESS_HOST, side_effect=mock_get_business_host),
         Patcher(target=CMDB_GET_BUSINESS_SET_HOST, side_effect=mock_get_business_set_host),
@@ -962,6 +1005,8 @@ EXECUTE_SUCCESS_CASE = ComponentTestCase(
         )
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=EXECUTE_SUCCESS_CLIENT),
         Patcher(target=GET_CLIENT_BY_USERNAME, return_value=EXECUTE_SUCCESS_CLIENT),
         Patcher(target=GET_CLIENT_JOB_BY_USERNAME, return_value=EXECUTE_SUCCESS_CLIENT),
@@ -971,10 +1016,12 @@ EXECUTE_SUCCESS_CASE = ComponentTestCase(
         ),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value="url_token"),
         Patcher(target=GET_JOB_INSTANCE_URL, return_value="instance_url_token"),
-            Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
-
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
         Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6, side_effect=mock_cc_get_host_by_innerip_with_ipv6),
-        Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS, side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business),
+        Patcher(
+            target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS,
+            side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business,
+        ),
         Patcher(target=GET_IPV4_HOST_LIST, side_effect=mock_get_ipv4_host_list),
         Patcher(target=CMDB_GET_BUSINESS_HOST, side_effect=mock_get_business_host),
         Patcher(target=CMDB_GET_BUSINESS_SET_HOST, side_effect=mock_get_business_set_host),
@@ -1074,6 +1121,8 @@ GET_VAR_ERROR_SUCCESS_CASE = ComponentTestCase(
         )
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=GET_VAR_ERROR_SUCCESS_CLIENT),
         Patcher(target=GET_CLIENT_BY_USERNAME, return_value=GET_VAR_ERROR_SUCCESS_CLIENT),
         Patcher(target=GET_CLIENT_JOB_BY_USERNAME, return_value=GET_VAR_ERROR_SUCCESS_CLIENT),
@@ -1083,10 +1132,12 @@ GET_VAR_ERROR_SUCCESS_CASE = ComponentTestCase(
         ),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value="url_token"),
         Patcher(target=GET_JOB_INSTANCE_URL, return_value="instance_url_token"),
-            Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
-
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
         Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6, side_effect=mock_cc_get_host_by_innerip_with_ipv6),
-        Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS, side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business),
+        Patcher(
+            target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS,
+            side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business,
+        ),
         Patcher(target=GET_IPV4_HOST_LIST, side_effect=mock_get_ipv4_host_list),
         Patcher(target=CMDB_GET_BUSINESS_HOST, side_effect=mock_get_business_host),
         Patcher(target=CMDB_GET_BUSINESS_SET_HOST, side_effect=mock_get_business_set_host),
@@ -1111,12 +1162,16 @@ INVALID_IP_CASE = ComponentTestCase(
     ),
     schedule_assertion=None,
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=EXECUTE_SUCCESS_CLIENT),
         Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT_EMPTY),
         Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"ip_result": []}),
-
         Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6, return_value={"result": True, "data": []}),
-        Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS, return_value=([], ["1.1.1.1", "2.2.2.2"], [], [], [])),
+        Patcher(
+            target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS,
+            return_value=([], ["1.1.1.1", "2.2.2.2"], [], [], []),
+        ),
         Patcher(target=GET_IPV4_HOST_LIST, return_value=[]),
         Patcher(target=CMDB_GET_BUSINESS_HOST, return_value=[]),
         Patcher(target=CMDB_GET_BUSINESS_SET_HOST, return_value=[]),
@@ -1175,6 +1230,8 @@ IP_IS_EXIST_CASE = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=EXECUTE_SUCCESS_CLIENT),
         Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value="url_token"),
@@ -1183,9 +1240,11 @@ IP_IS_EXIST_CASE = ComponentTestCase(
             target=CC_GET_IPS_INFO_BY_STR,
             return_value={"ip_result": [{"InnerIP": "1.1.1.1", "Source": 1}, {"InnerIP": "2.2.2.2", "Source": 1}]},
         ),
-
         Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6, side_effect=mock_cc_get_host_by_innerip_with_ipv6),
-        Patcher(target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS, side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business),
+        Patcher(
+            target=CC_GET_HOST_BY_INNERIP_WITH_IPV6_ACROSS_BUSINESS,
+            side_effect=mock_cc_get_host_by_innerip_with_ipv6_across_business,
+        ),
         Patcher(target=GET_IPV4_HOST_LIST, side_effect=mock_get_ipv4_host_list),
         Patcher(target=CMDB_GET_BUSINESS_HOST, side_effect=mock_get_business_host),
         Patcher(target=CMDB_GET_BUSINESS_SET_HOST, side_effect=mock_get_business_set_host),

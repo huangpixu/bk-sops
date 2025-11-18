@@ -24,6 +24,7 @@ from pipeline.component_framework.test import (
 )
 
 from pipeline_plugins.components.collections.sites.open.job import JobLocalContentUploadComponent
+from pipeline_plugins.tests.components.collections.sites.open.utils.cc_ipv6_mock_utils import MockCMDBClientIPv6
 
 
 class JobLocalContentUploadComponentTest(TestCase, ComponentTestMixin):
@@ -54,15 +55,25 @@ class MockClient(object):
         self.api.get_job_instance_status = MagicMock(return_value=get_job_instance_log_return)
 
 
+# Mock CMDB Client for IPv6 support
+class MockCMDBClient(MockCMDBClientIPv6):
+    def __init__(self):
+        super(MockCMDBClient, self).__init__()
+
+
 # mock path
 GET_CLIENT_BY_USER = (
     "pipeline_plugins.components.collections.sites.open.job.local_content_upload.base_service.get_client_by_username"
 )
+
+# 添加 CC client mock 路径，用于 IPv6 支持
+CC_GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.cc.base.get_client_by_username"
+CMDB_GET_CLIENT_BY_USERNAME = "gcloud.utils.cmdb.get_client_by_username"
+
 GET_NODE_CALLBACK_URL = (
     "pipeline_plugins.components.collections.sites.open.job.local_content_upload.base_service.get_node_callback_url"
 )
 CC_GET_IPS_INFO_BY_STR = "pipeline_plugins.components.utils.sites.open.utils.cc_get_ips_info_by_str"
-CMDB_GET_CLIENT_BY_USERNAME = "gcloud.utils.cmdb.get_client_by_username"
 JOB_HANDLE_API_ERROR = (
     "pipeline_plugins.components.collections.sites.open.job.local_content_upload.base_service.job_handle_api_error"
 )
@@ -227,6 +238,8 @@ LOCAL_CONTENT_UPLOAD_SUCCESS_SCHEDULE_CALLBACK_DATA_ERROR_CASE = ComponentTestCa
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(
             target=CC_GET_IPS_INFO_BY_STR,
             return_value={"ip_result": []},
@@ -257,6 +270,8 @@ LOCAL_CONTENT_UPLOAD_SUCCESS_SCHEDULE_SUCCESS_CASE = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"ip_result": [{"InnerIP": "1.1.1.1", "Source": 0}]}),
         Patcher(target=GET_CLIENT_BY_USER, return_value=LOCAL_CONTENT_UPLOAD_SUCCESS_CLIENT),
         Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
@@ -279,6 +294,8 @@ FAST_EXECUTE_MANUAL_SCRIPT_FAIL_CASE = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(
             target=CC_GET_IPS_INFO_BY_STR,
             return_value={"ip_result": []},
@@ -322,6 +339,8 @@ LOCAL_CONTENT_UPLOAD_ACROSS_BIZ_SUCCESS = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"ip_result": [{"InnerIP": "1.1.1.1", "Source": 2}]}),
         Patcher(target=GET_CLIENT_BY_USER, return_value=LOCAL_CONTENT_UPLOAD_SUCCESS_CLIENT),
         Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),

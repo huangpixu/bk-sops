@@ -25,6 +25,7 @@ from pipeline.component_framework.test import (
 )
 
 from pipeline_plugins.components.collections.sites.open.job import JobFastExecuteScriptComponent
+from pipeline_plugins.tests.components.collections.sites.open.utils.cc_ipv6_mock_utils import MockCMDBClientIPv6
 
 
 class JobFastExecuteScriptComponentTest(TestCase, ComponentTestMixin):
@@ -59,12 +60,22 @@ class MockClient(object):
         self.api.get_job_instance_status = MagicMock(return_value=get_job_instance_status)
 
 
+# Mock CMDB Client for IPv6 support
+class MockCMDBClient(MockCMDBClientIPv6):
+    def __init__(self):
+        super(MockCMDBClient, self).__init__()
+
+
 # mock path
 GET_CLIENT_BY_USER = (
     "pipeline_plugins.components.collections.sites.open.job.fast_execute_script.legacy.get_client_by_username"
 )
-GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.job.base.get_client_by_username"
+
+# 添加 CC client mock 路径，用于 IPv6 支持
+CC_GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.cc.base.get_client_by_username"
 CMDB_GET_CLIENT_BY_USERNAME = "gcloud.utils.cmdb.get_client_by_username"
+
+GET_CLIENT_BY_USERNAME = "pipeline_plugins.components.collections.sites.open.job.base.get_client_by_username"
 
 GET_NODE_CALLBACK_URL = (
     "pipeline_plugins.components.collections.sites.open.job.fast_execute_script.legacy.get_node_callback_url"
@@ -310,13 +321,13 @@ MANUAL_KWARGS = {
     "script_content": "ZWNobw==",
 }
 
-# 手动输入脚本失败样例输出  
+# 手动输入脚本失败样例输出
 MANUAL_FAIL_OUTPUTS = {
     "ex_data": "调用作业平台(JOB)接口jobv3.fast_execute_script返回失败, error={error}, params={params}, "
     "request_id=aac7755b09944e4296b2848d81bd9411".format(params=json.dumps(MANUAL_KWARGS), error=FAIL_RESULT["message"])
 }
 
-# IP校验失败输出：当CMDB只返回部分IP时，会报告缺失的IP  
+# IP校验失败输出：当CMDB只返回部分IP时，会报告缺失的IP
 # 根据实际环境，可能返回不同的错误消息：
 # - ENABLE_IPV6=False: "无法从配置平台(CMDB)查询到对应 IP，请确认输入的 IP 是否合法。查询失败 IP： 127.0.0.2"
 # - ENABLE_IPV6=True: "ip查询失败，请检查ip配置是否正确，ip_list=ip not found in business: 127.0.0.2"
@@ -359,6 +370,8 @@ FAST_EXECUTE_MANUAL_SCRIPT_SUCCESS_SCHEDULE_CALLBACK_DATA_ERROR_CASE = Component
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value=GET_NODE_CALLBACK_URL_MOCK()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=FAST_EXECUTE_SCRIPT_SUCCESS_CLIENT),
         Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
@@ -388,6 +401,8 @@ FAST_EXECUTE_MANUAL_SCRIPT_SUCCESS_SCHEDULE_SUCCESS_CASE = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value=GET_NODE_CALLBACK_URL_MOCK()),
         Patcher(
             target=CC_GET_IPS_INFO_BY_STR,
@@ -418,6 +433,8 @@ FAST_EXECUTE_MANUAL_SCRIPT_FAIL_CASE = ComponentTestCase(
         ),
     ],
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_NODE_CALLBACK_URL, return_value=GET_NODE_CALLBACK_URL_MOCK()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=FAST_EXECUTE_SCRIPT_FAIL_CLIENT),
         Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT),
@@ -437,6 +454,8 @@ IP_IS_EXIST_FAIL_CASE = ComponentTestCase(
     execute_assertion=ExecuteAssertion(success=False, outputs=IP_IS_EXIST_FAIL_OUTPUTS),
     schedule_assertion=None,
     patchers=[
+        Patcher(target=CC_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
+        Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=MockCMDBClient()),
         Patcher(target=GET_CLIENT_BY_USER, return_value=FAST_EXECUTE_SCRIPT_FAIL_CLIENT),
         Patcher(target=CMDB_GET_CLIENT_BY_USERNAME, return_value=CMDB_CLIENT_PARTIAL),
         Patcher(target=CC_GET_IPS_INFO_BY_STR, return_value={"ip_result": [{"InnerIP": "127.0.0.1", "Source": 1}]}),
