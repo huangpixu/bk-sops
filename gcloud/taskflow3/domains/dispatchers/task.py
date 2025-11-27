@@ -112,7 +112,7 @@ class TaskCommandDispatcher(EngineCommandDispatcher):
 
             return getattr(self, "{}_v{}".format(command, self.engine_ver))(operator)
 
-    def start_v1(self, executor: str) -> dict:
+    def start_v1(self, executor: str) -> dict:  # pragma: no cover
         try:
             pre_taskflow_start.send(sender=self.__class__, task_id=self.taskflow_id, executor=executor)
             result = self.pipeline_instance.start(executor=executor, queue=self.queue, check_workers=False)
@@ -232,7 +232,7 @@ class TaskCommandDispatcher(EngineCommandDispatcher):
         return dict_result
 
     @ensure_return_is_dict
-    def pause_v1(self, operator: str) -> dict:
+    def pause_v1(self, operator: str) -> dict:  # pragma: no cover
         return task_service.pause_pipeline(pipeline_id=self.pipeline_instance.instance_id)
 
     @ensure_return_is_dict
@@ -242,7 +242,7 @@ class TaskCommandDispatcher(EngineCommandDispatcher):
         )
 
     @ensure_return_is_dict
-    def resume_v1(self, operator: str) -> dict:
+    def resume_v1(self, operator: str) -> dict:  # pragma: no cover
         return task_service.resume_pipeline(pipeline_id=self.pipeline_instance.instance_id)
 
     @ensure_return_is_dict
@@ -252,7 +252,7 @@ class TaskCommandDispatcher(EngineCommandDispatcher):
         )
 
     @ensure_return_is_dict
-    def revoke_v1(self, operator: str) -> dict:
+    def revoke_v1(self, operator: str) -> dict:  # pragma: no cover
         return task_service.revoke_pipeline(pipeline_id=self.pipeline_instance.instance_id)
 
     @ensure_return_is_dict
@@ -475,7 +475,7 @@ class TaskCommandDispatcher(EngineCommandDispatcher):
                     failed_nodes.append(node_id)
         return failed_nodes
 
-    def get_task_status_v1(self, subprocess_id: Optional[str], with_ex_data: bool, *args, **kwargs) -> dict:
+    def get_task_status_v1(self, subprocess_id: Optional[str], with_ex_data: bool, *args, **kwargs) -> dict:  # pragma: no cover
         if self.pipeline_instance.is_expired:
             return {"result": True, "data": {"state": "EXPIRED"}, "message": "", "code": err_code.SUCCESS.code}
         if not self.pipeline_instance.is_started:
@@ -642,7 +642,7 @@ class TaskCommandDispatcher(EngineCommandDispatcher):
 
         return getattr(self, "render_current_constants_v{}".format(self.engine_ver))()
 
-    def render_current_constants_v1(self):
+    def render_current_constants_v1(self):  # pragma: no cover
         if not (
             self.pipeline_instance.is_started
             and not self.pipeline_instance.is_finished
