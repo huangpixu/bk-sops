@@ -22,7 +22,9 @@ from gcloud.utils.dates import format_datetime
 from .utils import TEST_USERNAME, APITest
 
 MOCK_GET_FLOW_ALLOWED_ACTIONS = "gcloud.apigw.views.get_template_list.get_flow_allowed_actions_for_user"
-MOCK_GET_COMMON_FLOW_ALLOWED_ACTIONS = "gcloud.apigw.views.get_template_list.get_common_flow_allowed_actions_for_user"
+MOCK_GET_COMMON_FLOW_ALLOWED_ACTIONS = (
+    "gcloud.apigw.views.get_template_list.get_common_flow_allowed_actions_for_user_and_project"
+)
 
 
 TEST_PROJECT_ID = "123"
@@ -163,7 +165,21 @@ class GetTemplateListAPITest(APITest):
             COMMONTEMPLATE_SELECT_RELATE,
             MagicMock(return_value=MockQuerySet(filter_result=task_templates)),
         ), patch(
-            MOCK_GET_COMMON_FLOW_ALLOWED_ACTIONS, MagicMock(return_value=TEST_ALLOWED_ACTIONS)
+            MOCK_GET_COMMON_FLOW_ALLOWED_ACTIONS,
+            MagicMock(
+                return_value={
+                    "1": {
+                        IAMMeta.COMMON_FLOW_VIEW_ACTION: True,
+                        IAMMeta.COMMON_FLOW_CREATE_TASK_ACTION: False,
+                        IAMMeta.PROJECT_COMMON_CREATE_TASK_ACTION: False,
+                    },
+                    "2": {
+                        IAMMeta.COMMON_FLOW_VIEW_ACTION: True,
+                        IAMMeta.COMMON_FLOW_CREATE_PERIODIC_TASK_ACTION: False,
+                        IAMMeta.PROJECT_COMMON_CREATE_PERIODIC_ACTION: False,
+                    },
+                }
+            ),
         ) as get_actions, patch(
             MOCK_GET_FLOW_ALLOWED_ACTIONS
         ) as get_project_actions:
@@ -180,7 +196,7 @@ class GetTemplateListAPITest(APITest):
                     "project_name": TEST_PROJECT_NAME,
                     "bk_biz_id": TEST_PROJECT_ID,
                     "bk_biz_name": TEST_PROJECT_NAME,
-                    "auth_actions": ["TEST_ACTION"],
+                    "auth_actions": [IAMMeta.COMMON_FLOW_VIEW_ACTION],
                     "description": tmpl.pipeline_template.description,
                 }
                 for tmpl in task_templates
@@ -198,6 +214,7 @@ class GetTemplateListAPITest(APITest):
                 TEST_USERNAME,
                 [action for action in COMMON_FLOW_ACTIONS if action != IAMMeta.COMMON_FLOW_CREATE_ACTION],
                 TEST_TASK_ID_LIST,
+                TEST_PROJECT_ID,
                 "system",
             )
             get_project_actions.assert_not_called()

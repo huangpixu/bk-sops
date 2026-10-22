@@ -145,6 +145,38 @@ class CommonTemplatePermissionInjectionTestCase(SimpleTestCase):
             project_resource,
         )
 
+    @patch("gcloud.iam_auth.utils.PermissionService")
+    @patch("gcloud.iam_auth.utils.get_resources_allowed_actions_for_user")
+    @patch("gcloud.iam_auth.utils.res_factory.resources_for_project")
+    @patch("gcloud.iam_auth.utils.res_factory.resources_list_for_common_flows")
+    def test_project_denial_masks_common_flow_create_actions(
+        self, common_resources, project_resources, get_common_actions, permission_service
+    ):
+        common_resources.return_value = [[SimpleNamespace(id="7")]]
+        project_resources.return_value = [SimpleNamespace(id="42")]
+        get_common_actions.return_value = {
+            "7": {
+                IAMMeta.COMMON_FLOW_CREATE_TASK_ACTION: True,
+                IAMMeta.COMMON_FLOW_CREATE_PERIODIC_TASK_ACTION: True,
+            }
+        }
+        permission_service.return_value.allowed_actions.side_effect = lambda user, tenant, actions, resource: {
+            actions[0]: False,
+            IAMMeta.PROJECT_VIEW_ACTION: True,
+        }
+
+        result = get_common_flow_allowed_actions_for_user_and_project(
+            "alice",
+            [IAMMeta.COMMON_FLOW_CREATE_TASK_ACTION, IAMMeta.COMMON_FLOW_CREATE_PERIODIC_TASK_ACTION],
+            [7],
+            "42",
+            "tenant-a",
+        )
+
+        self.assertFalse(result["7"][IAMMeta.COMMON_FLOW_CREATE_TASK_ACTION])
+        self.assertFalse(result["7"][IAMMeta.COMMON_FLOW_CREATE_PERIODIC_TASK_ACTION])
+        self.assertEqual(permission_service.return_value.allowed_actions.call_count, 2)
+
     @patch("gcloud.core.apis.drf.viewsets.common_template." "get_common_flow_allowed_actions_for_user_and_project")
     def test_create_task_action_requires_common_flow_and_project_permissions(self, get_allowed_actions):
         get_allowed_actions.return_value = {
